@@ -7,7 +7,7 @@ Individual API features have folders where you can find examples of usage in sev
 
 ## Prerequisites
 
-* Twitter API Essential Access ([sign up here](https://developer.twitter.com/en/portal/petition/essential/basic-info))
+* Twitter API Essential Access ([sign up here](https://t.co/signup))
 * A Project and an App created [in the dashboard](https://developer.twitter.com/en/portal/dashboard)
 
 ## Using the code samples
@@ -52,6 +52,13 @@ npm install oauth-1.0a
 ### Python environment set up
 
 You will need to have Python 3 installed to run this code. The Python samples use `requests==2.24.0` which uses `requests-oauthlib==1.3.0`.
+
+(Optionally) It is common and recommended not to install required package globally, but locally under project subfolder using `venv`:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
 You can install these packages as follows:
 
