@@ -1,56 +1,41 @@
-import requests
+"""
+Retweeted By (Users who reposted) - X API v2
+============================================
+Endpoint: GET https://api.x.com/2/tweets/:id/retweeted_by
+Docs: https://developer.x.com/en/docs/twitter-api/tweets/retweets/api-reference/get-tweets-id-retweeted_by
+
+Authentication: Bearer Token (App-only) or OAuth (User Context)
+Required env vars: BEARER_TOKEN
+"""
+
 import os
 import json
-
-# To set your enviornment variables in your terminal run the following line:
-# export 'BEARER_TOKEN'='<your_bearer_token>'
-
+from xdk import Client
 
 bearer_token = os.environ.get("BEARER_TOKEN")
+client = Client(bearer_token=bearer_token)
 
+# You can replace the ID given with the Post ID you wish to lookup reposting users for
+# You can find an ID by using the Post lookup endpoint
+post_id = "1354143047324299264"
 
-def create_url():
+def main():
+    # Get reposted by users with automatic pagination
     # User fields are adjustable, options include:
     # created_at, description, entities, id, location, name,
     # pinned_tweet_id, profile_image_url, protected,
     # public_metrics, url, username, verified, and withheld
-    user_fields = "user.fields=created_at,description"
-    # You can replace the ID given with the Tweet ID you wish to lookup Retweeting users for
-    # You can find an ID by using the Tweet lookup endpoint
-    id = "1354143047324299264"
-    # You can adjust ids to include a single Tweets.
-    # Or you can add to up to 100 comma-separated IDs
-    url = "https://api.x.com/2/tweets/{}/retweeted_by".format(id)
-    return url, user_fields
-
-
-def bearer_oauth(r):
-    """
-    Method required by bearer token authentication.
-    """
-
-    r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2RetweetedByPython"
-    return r
-
-
-def connect_to_endpoint(url, user_fields):
-    response = requests.request("GET", url, auth=bearer_oauth, params=user_fields)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(
-            "Request returned an error: {} {}".format(
-                response.status_code, response.text
-            )
-        )
-    return response.json()
-
-
-def main():
-    url, user_fields = create_url()
-    json_response = connect_to_endpoint(url, user_fields)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    all_users = []
+    for page in client.posts.get_reposted_by(
+        post_id,
+        max_results=100,
+        userfields=["created_at", "description"]
+    ):
+        all_users.extend(page.data)
+        print(f"Fetched {len(page.data)} users (total: {len(all_users)})")
+    
+    print(f"\nTotal Users: {len(all_users)}")
+    print(json.dumps({"data": all_users[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()

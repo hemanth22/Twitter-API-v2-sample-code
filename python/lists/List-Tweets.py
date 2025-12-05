@@ -1,13 +1,25 @@
-import requests
+"""
+List Tweets - X API v2
+======================
+Endpoint: GET https://api.x.com/2/lists/:id/tweets
+Docs: https://developer.x.com/en/docs/twitter-api/lists/list-tweets/api-reference/get-lists-id-tweets
+
+Authentication: Bearer Token (App-only) or OAuth (User Context)
+Required env vars: BEARER_TOKEN
+"""
+
 import os
 import json
+from xdk import Client
 
-# To set your enviornment variables in your terminal run the following line:
-# export 'BEARER_TOKEN'='<your_bearer_token>'
 bearer_token = os.environ.get("BEARER_TOKEN")
+client = Client(bearer_token=bearer_token)
 
+# Be sure to replace list-id with any List ID
+list_id = "list-id"
 
-def create_url():
+def main():
+    # Get list tweets with automatic pagination
     # Tweet fields are adjustable.
     # Options include:
     # attachments, author_id, context_annotations,
@@ -15,41 +27,17 @@ def create_url():
     # in_reply_to_user_id, lang, non_public_metrics, organic_metrics,
     # possibly_sensitive, promoted_metrics, public_metrics, referenced_tweets,
     # source, text, and withheld
-    tweet_fields = "tweet.fields=lang,author_id"
-    # Be sure to replace list-id with any List ID
-    id = "list-id"
-    url = "https://api.x.com/2/lists/{}/tweets".format(id)
-    return url, tweet_fields
-
-
-def bearer_oauth(r):
-    """
-    Method required by bearer token authentication.
-    """
-
-    r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2ListTweetsLookupPython"
-    return r
-
-
-def connect_to_endpoint(url, tweet_fields):
-    response = requests.request(
-        "GET", url, auth=bearer_oauth, params=tweet_fields)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(
-            "Request returned an error: {} {}".format(
-                response.status_code, response.text
-            )
-        )
-    return response.json()
-
-
-def main():
-    url, tweet_fields = create_url()
-    json_response = connect_to_endpoint(url, tweet_fields)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    all_posts = []
+    for page in client.lists.get_tweets(
+        list_id,
+        max_results=100,
+        tweetfields=["lang", "author_id"]
+    ):
+        all_posts.extend(page.data)
+        print(f"Fetched {len(page.data)} posts (total: {len(all_posts)})")
+    
+    print(f"\nTotal Posts: {len(all_posts)}")
+    print(json.dumps({"data": all_posts[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()

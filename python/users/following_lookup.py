@@ -1,50 +1,36 @@
-import requests
+"""
+User Following Lookup - X API v2
+================================
+Endpoint: GET https://api.x.com/2/users/:id/following
+Docs: https://developer.x.com/en/docs/twitter-api/users/follows/api-reference/get-users-id-following
+
+Authentication: Bearer Token (App-only) or OAuth (User Context)
+Required env vars: BEARER_TOKEN
+"""
+
 import os
 import json
+from xdk import Client
 
-# To set your environment variables in your terminal run the following line:
-# export 'BEARER_TOKEN'='<your_bearer_token>'
 bearer_token = os.environ.get("BEARER_TOKEN")
+client = Client(bearer_token=bearer_token)
 
-
-def create_url():
-    # Replace with user ID below
-    user_id = 2244994945
-    return "https://api.x.com/2/users/{}/following".format(user_id)
-
-
-def get_params():
-    return {"user.fields": "created_at"}
-
-
-def bearer_oauth(r):
-    """
-    Method required by bearer token authentication.
-    """
-
-    r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2FollowingLookupPython"
-    return r
-
-
-def connect_to_endpoint(url, params):
-    response = requests.request("GET", url, auth=bearer_oauth, params=params)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(
-            "Request returned an error: {} {}".format(
-                response.status_code, response.text
-            )
-        )
-    return response.json()
-
+# Replace with user ID below
+user_id = "2244994945"
 
 def main():
-    url = create_url()
-    params = get_params()
-    json_response = connect_to_endpoint(url, params)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    # Get following with automatic pagination
+    all_users = []
+    for page in client.users.get_following(
+        user_id,
+        max_results=100,
+        userfields=["created_at"]
+    ):
+        all_users.extend(page.data)
+        print(f"Fetched {len(page.data)} users (total: {len(all_users)})")
+    
+    print(f"\nTotal Following: {len(all_users)}")
+    print(json.dumps({"data": all_users[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()

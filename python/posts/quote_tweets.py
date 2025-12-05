@@ -1,22 +1,25 @@
-import requests
+"""
+Quote Tweets Lookup - X API v2
+==============================
+Endpoint: GET https://api.x.com/2/tweets/:id/quote_tweets
+Docs: https://developer.x.com/en/docs/twitter-api/tweets/quote-tweets/api-reference/get-tweets-id-quote_tweets
+
+Authentication: Bearer Token (App-only) or OAuth (User Context)
+Required env vars: BEARER_TOKEN
+"""
+
 import os
 import json
+from xdk import Client
 
-# To set your environment variables in your terminal run the following line:
-# export 'BEARER_TOKEN'='<your_bearer_token>'
+bearer_token = os.environ.get("BEARER_TOKEN")
+client = Client(bearer_token=bearer_token)
 
+# Replace with the post ID you want to get quotes for
+post_id = "1409931481552543749"
 
-def auth():
-    return os.environ.get("BEARER_TOKEN")
-
-
-def create_url():
-    # Replace with Tweet ID below
-    tweet_id = 20
-    return "https://api.x.com/2/tweets/{}/quote_tweets".format(tweet_id)
-
-
-def get_params():
+def main():
+    # Get quote tweets with automatic pagination
     # Tweet fields are adjustable.
     # Options include:
     # attachments, author_id, context_annotations,
@@ -24,34 +27,17 @@ def get_params():
     # in_reply_to_user_id, lang, non_public_metrics, organic_metrics,
     # possibly_sensitive, promoted_metrics, public_metrics, referenced_tweets,
     # source, text, and withheld
-    return {"tweet.fields": "created_at"}
-
-
-def create_headers(bearer_token):
-    headers = {"Authorization": "Bearer {}".format(bearer_token)}
-    return headers
-
-
-def connect_to_endpoint(url, headers, params):
-    response = requests.request("GET", url, headers=headers, params=params)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(
-            "Request returned an error: {} {}".format(
-                response.status_code, response.text
-            )
-        )
-    return response.json()
-
-
-def main():
-    bearer_token = auth()
-    url = create_url()
-    headers = create_headers(bearer_token)
-    params = get_params()
-    json_response = connect_to_endpoint(url, headers, params)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    all_posts = []
+    for page in client.posts.get_quoted(
+        post_id,
+        max_results=100,
+        tweetfields=["created_at"]
+    ):
+        all_posts.extend(page.data)
+        print(f"Fetched {len(page.data)} posts (total: {len(all_posts)})")
+    
+    print(f"\nTotal Quote Tweets: {len(all_posts)}")
+    print(json.dumps({"data": all_posts[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()

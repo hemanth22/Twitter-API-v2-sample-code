@@ -1,50 +1,39 @@
-import requests
+"""
+User List Memberships Lookup - X API v2
+=======================================
+Endpoint: GET https://api.x.com/2/users/:id/list_memberships
+Docs: https://developer.x.com/en/docs/twitter-api/lists/list-members/api-reference/get-users-id-list_memberships
+
+Authentication: Bearer Token (App-only) or OAuth (User Context)
+Required env vars: BEARER_TOKEN
+"""
+
 import os
 import json
+from xdk import Client
 
-# To set your enviornment variables in your terminal run the following line:
-# export 'BEARER_TOKEN'='<your_bearer_token>'
 bearer_token = os.environ.get("BEARER_TOKEN")
+client = Client(bearer_token=bearer_token)
 
+# You can replace the user-id with any valid User ID you wish to find what Lists they are members of.
+user_id = "user-id"
 
-def create_url():
+def main():
+    # Get user list memberships with automatic pagination
     # List fields are adjustable, options include:
     # created_at, description, owner_id,
     # private, follower_count, member_count,
-    list_fields = "list.fields=created_at,follower_count"
-    # You can replace the user-id with any valid User ID you wish to find what Lists they are members of.
-    id = "user-id"
-    url = "https://api.x.com/2/users/{}/list_memberships".format(id)
-    return url, list_fields
-
-
-def bearer_oauth(r):
-    """
-    Method required by bearer token authentication.
-    """
-
-    r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2userListMembershipsPython"
-    return r
-
-
-def connect_to_endpoint(url, list_fields):
-    response = requests.request("GET", url, auth=bearer_oauth, params=list_fields)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(
-            "Request returned an error: {} {}".format(
-                response.status_code, response.text
-            )
-        )
-    return response.json()
-
-
-def main():
-    url, list_fields = create_url()
-    json_response = connect_to_endpoint(url, list_fields)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    all_lists = []
+    for page in client.users.get_list_memberships(
+        user_id,
+        max_results=100,
+        listfields=["created_at", "follower_count"]
+    ):
+        all_lists.extend(page.data)
+        print(f"Fetched {len(page.data)} lists (total: {len(all_lists)})")
+    
+    print(f"\nTotal List Memberships: {len(all_lists)}")
+    print(json.dumps({"data": all_lists[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()

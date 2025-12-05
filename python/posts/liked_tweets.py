@@ -1,13 +1,60 @@
-import requests
+"""
+Liked Tweets - X API v2
+======================
+Endpoint: GET https://api.x.com/2/users/:id/liked_tweets
+Docs: https://developer.x.com/en/docs/twitter-api/tweets/likes/api-reference/get-users-id-liked_tweets
+
+Authentication: OAuth 2.0 (User Context)
+Required env vars: CLIENT_ID, CLIENT_SECRET
+"""
+
 import os
 import json
+from xdk import Client
+from xdk.oauth2_auth import OAuth2PKCEAuth
 
-# To set your enviornment variables in your terminal run the following line:
-# export 'BEARER_TOKEN'='<your_bearer_token>'
-bearer_token = os.environ.get("BEARER_TOKEN")
+# The code below sets the client ID and client secret from your environment variables
+# To set environment variables on macOS or Linux, run the export commands below from the terminal:
+# export CLIENT_ID='YOUR-CLIENT-ID'
+# export CLIENT_SECRET='YOUR-CLIENT-SECRET'
+client_id = os.environ.get("CLIENT_ID")
+client_secret = os.environ.get("CLIENT_SECRET")
 
+# Replace the following URL with your callback URL, which can be obtained from your App's auth settings.
+redirect_uri = "https://example.com"
 
-def create_url():
+# Set the scopes
+scopes = ["tweet.read", "users.read", "like.read", "offline.access"]
+
+# Be sure to replace your-user-id with your own user ID or one of an authenticated user
+# You can find a user ID by using the user lookup endpoint
+user_id = "your-user-id"
+
+def main():
+    # Step 1: Create PKCE instance
+    auth = OAuth2PKCEAuth(
+        client_id=client_id,
+        client_secret=client_secret,
+        redirect_uri=redirect_uri,
+        scope=scopes
+    )
+    
+    # Step 2: Get authorization URL
+    auth_url = auth.get_authorization_url()
+    print("Visit the following URL to authorize your App on behalf of your X handle in a browser:")
+    print(auth_url)
+    
+    # Step 3: Handle callback
+    callback_url = input("Paste the full callback URL here: ")
+    
+    # Step 4: Exchange code for tokens
+    tokens = auth.fetch_token(authorization_response=callback_url)
+    access_token = tokens["access_token"]
+    
+    # Step 5: Create client
+    client = Client(access_token=access_token)
+    
+    # Step 6: Get liked tweets with automatic pagination
     # Tweet fields are adjustable.
     # Options include:
     # attachments, author_id, context_annotations,
@@ -15,44 +62,17 @@ def create_url():
     # in_reply_to_user_id, lang, non_public_metrics, organic_metrics,
     # possibly_sensitive, promoted_metrics, public_metrics, referenced_tweets,
     # source, text, and withheld
-    tweet_fields = "tweet.fields=lang,author_id"
-    # Be sure to replace your-user-id with your own user ID or one of an authenticating user
-    # You can find a user ID by using the user lookup endpoint
-    id = "your-user-id"
-    # You can adjust ids to include a single Tweets.
-    # Or you can add to up to 100 comma-separated IDs
-    url = "https://api.x.com/2/users/{}/liked_tweets".format(id)
-    return url, tweet_fields
-
-
-def bearer_oauth(r):
-    """
-    Method required by bearer token authentication.
-    """
-
-    r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2LikedTweetsPython"
-    return r
-
-
-def connect_to_endpoint(url, tweet_fields):
-    response = requests.request(
-        "GET", url, auth=bearer_oauth, params=tweet_fields)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(
-            "Request returned an error: {} {}".format(
-                response.status_code, response.text
-            )
-        )
-    return response.json()
-
-
-def main():
-    url, tweet_fields = create_url()
-    json_response = connect_to_endpoint(url, tweet_fields)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    all_posts = []
+    for page in client.users.get_liked_tweets(
+        user_id,
+        max_results=100,
+        tweetfields=["lang", "author_id"]
+    ):
+        all_posts.extend(page.data)
+        print(f"Fetched {len(page.data)} posts (total: {len(all_posts)})")
+    
+    print(f"\nTotal Liked Tweets: {len(all_posts)}")
+    print(json.dumps({"data": all_posts[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()

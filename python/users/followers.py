@@ -8,46 +8,29 @@ Authentication: Bearer Token (App-only) or OAuth (User Context)
 Required env vars: BEARER_TOKEN
 """
 
-import requests
 import os
 import json
+from xdk import Client
 
 bearer_token = os.environ.get("BEARER_TOKEN")
+client = Client(bearer_token=bearer_token)
 
-
-def create_url():
-    # Replace with the user ID you want to get followers for
-    user_id = "2244994945"
-    return "https://api.x.com/2/users/{}/followers".format(user_id)
-
-
-def get_params():
-    return {"user.fields": "created_at"}
-
-
-def bearer_oauth(r):
-    """
-    Method required by bearer token authentication.
-    """
-    r.headers["Authorization"] = f"Bearer {bearer_token}"
-    r.headers["User-Agent"] = "v2FollowersLookupPython"
-    return r
-
-
-def connect_to_endpoint(url, params):
-    response = requests.request("GET", url, auth=bearer_oauth, params=params)
-    print(response.status_code)
-    if response.status_code != 200:
-        raise Exception(response.status_code, response.text)
-    return response.json()
-
+# Replace with the user ID you want to get followers for
+user_id = "2244994945"
 
 def main():
-    url = create_url()
-    params = get_params()
-    json_response = connect_to_endpoint(url, params)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
-
+    # Get followers with automatic pagination
+    all_users = []
+    for page in client.users.get_followers(
+        user_id,
+        max_results=100,
+        userfields=["created_at"]
+    ):
+        all_users.extend(page.data)
+        print(f"Fetched {len(page.data)} users (total: {len(all_users)})")
+    
+    print(f"\nTotal Followers: {len(all_users)}")
+    print(json.dumps({"data": all_users[:5]}, indent=4, sort_keys=True))  # Print first 5 as example
 
 if __name__ == "__main__":
     main()
